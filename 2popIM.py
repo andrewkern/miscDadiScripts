@@ -24,7 +24,7 @@ def readLFromFSFile(fsFileName):
 
 inFileName = sys.argv[1].split("/")[-1]
 swarmSize = int(sys.argv[2])
-gensPerYear = int(sys.argv[3])
+gensPerYear = float(sys.argv[3])
 
 L, ns = readLFromFSFile(sys.argv[1])
 data = dadi.Spectrum.from_file(sys.argv[1])

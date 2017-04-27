@@ -12,6 +12,41 @@ try:
 except:
     raise ImportError('mpi4py is required for parallelization')
 
+def IM_sym_fixed_ancGrowth(params, ns, pts):
+    """
+    ns = (n1,n2)
+    params = (nu1_0,nu2_0,nu1,nu2,T,m12,m21,p_misid)
+
+    Isolation-with-migration model with exponential pop growth before and after split.
+
+    nu1_0: Size of pop 1 after split.
+    nu2_0: Size of pop 2 after split. 
+    nu1: Final size of pop 1.
+    nu2: Final size of pop 2.
+    T: Time in the past of split (in units of 2*Na generations) 
+    m: symmetric migration rate for each pop (2*Na*m)
+    Tg: Time of growth in ancestral population minus T
+    nua: Final size of ancestral population
+    n1,n2: Sample sizes of resulting Spectrum
+    pts: Number of grid points to use in integration.
+    """
+    nu1_0,nu2_0,nu1,nu2,T,m,Tg,nua = params
+    p_misid=0.001
+    xx = dadi.Numerics.default_grid(pts)
+
+    phi = dadi.PhiManip.phi_1D(xx)
+    nua_func = lambda t: numpy.exp(numpy.log(nua) * t/(Tg+T))
+    phi = dadi.Integration.one_pop(phi, xx, Tg, nua_func)
+    phi = dadi.PhiManip.phi_1D_to_2D(xx, phi)
+
+    nu1_func = lambda t: nu1_0 * (nu1/nu1_0)**(t/T)
+    nu2_func = lambda t: nu2_0 * (nu2/nu2_0)**(t/T)
+    phi = dadi.Integration.two_pops(phi, xx, T, nu1_func, nu2_func,
+                               m12=m, m21=m)
+
+    fs = dadi.Spectrum.from_phi(phi, ns, (xx,xx))
+    return (1-p_misid)*fs + p_misid * dadi.Numerics.reverse_array(fs)
+
 def readLFromFSFile(fsFileName):
     with open(fsFileName) as fsFile:
         lines = []
@@ -22,20 +57,20 @@ def readLFromFSFile(fsFileName):
         L = sum([int(x) for x in lines[1].split()])
     return L, ns
 
-inFileName = sys.argv[1].split("/")[-1]
+inFileName = sys.argv[1]
 swarmSize = int(sys.argv[2])
 gensPerYear = float(sys.argv[3])
 
-L, ns = readLFromFSFile(sys.argv[1])
-data = dadi.Spectrum.from_file(sys.argv[1])
+L, ns = readLFromFSFile(inFileName)
+data = dadi.Spectrum.from_file(inFileName)
 
-firstSize=60
+firstSize=120
 pts_l = [firstSize,firstSize+10,firstSize+20]
 
-func = dadiFunctions.IM_misorient_noMig
+func = IM_sym_fixed_ancGrowth
 
-upper_bound = [1e2, 1e2, 1e2, 1e2, 2, 0.05]
-lower_bound = [1e-2, 1e-2, 1e-2, 1e-2, 0, 0]
+upper_bound = [1e2, 1e2, 1e2, 1e2, 2, 20, 2, 1e2]
+lower_bound = [1e-2, 1e-2, 1e-2, 1e-2, 0, 0, 0, 1e-2]
 
 p1=dadiFunctions.makeRandomParams(lower_bound,upper_bound)
 
@@ -57,12 +92,13 @@ opt_prob.addVar('nu2_0','c',lower=lower_bound[1],upper=upper_bound[1],value=p1[1
 opt_prob.addVar('nu1','c',lower=lower_bound[2],upper=upper_bound[2],value=p1[2])
 opt_prob.addVar('nu2','c',lower=lower_bound[3],upper=upper_bound[3],value=p1[3])
 opt_prob.addVar('T','c',lower=lower_bound[4],upper=upper_bound[4],value=p1[4])
-opt_prob.addVar('p_misid','c',lower=lower_bound[5],upper=upper_bound[5],value=p1[5])
+opt_prob.addVar('m','c',lower=lower_bound[5],upper=upper_bound[5],value=p1[5])
+opt_prob.addVar('Tg','c',lower=lower_bound[6],upper=upper_bound[6],value=p1[6])
+opt_prob.addVar('nua','c',lower=lower_bound[7],upper=upper_bound[7],value=p1[7])
 opt_prob.addObj('f')
 
 if myrank == 0:
     print opt_prob
-
 
 #optimize
 psqp = pyOpt.ALPSO(pll_type='DPM')
@@ -88,8 +124,8 @@ if myrank == 0:
     Nref= theta0 / mu / L / 4
 
     print 'Nref:',Nref
-    paramsTxt =['nu1_0','nu2_0','nu1','nu2','T', 'p_misid']
-    scaledParams = [Nref*popt[0],Nref*popt[1],Nref*popt[2],Nref*popt[3],2*Nref/gensPerYear*popt[4], popt[5]]
+    paramsTxt =['nu1_0','nu2_0','nu1','nu2','T', '2Nref_m', "Tg", "nua"]
+    scaledParams = [Nref*popt[0],Nref*popt[1],Nref*popt[2],Nref*popt[3],2*Nref/gensPerYear*popt[4], popt[5], 2*Nref/gensPerYear*popt[4]+2*Nref/gensPerYear*popt[6], Nref*popt[7]]
     for i in range(len(paramsTxt)):
         print paramsTxt[i],':',str(scaledParams[i])
     print ""
@@ -123,8 +159,8 @@ if myrank == 0:
     Nref= theta0 / mu / L / 4
 
     print 'Nref:',Nref
-    paramsTxt =['nu1_0','nu2_0','nu1','nu2','T', 'p_misid']
-    scaledParams = [Nref*popt[0],Nref*popt[1],Nref*popt[2],Nref*popt[3],2*Nref/gensPerYear*popt[4], popt[5]]
+    paramsTxt =['nu1_0','nu2_0','nu1','nu2','T', '2Nref_m', "Tg", "nua"]
+    scaledParams = [Nref*popt[0],Nref*popt[1],Nref*popt[2],Nref*popt[3],2*Nref/gensPerYear*popt[4], popt[5], 2*Nref/gensPerYear*popt[4]+2*Nref/gensPerYear*popt[6], Nref*popt[7]]
     for i in range(len(paramsTxt)):
         print paramsTxt[i],':',str(scaledParams[i])
     print ""
