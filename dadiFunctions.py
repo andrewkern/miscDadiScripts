@@ -422,7 +422,7 @@ def IM_const(params, ns, pts):
     ns = (n1,n2)
     params = (nu1_0,nu2_0,T,m12,m21)
 
-    Isolation-with-migration model with exponential pop growth.
+    Isolation-with-migration model.
 
     nu1_0: Size of pop 1 after split.
     nu2_0: Size of pop 2 after split.
@@ -453,7 +453,7 @@ def IM_noMig_const(params, ns, pts):
     ns = (n1,n2)
     params = (nu1_0,nu2_0,T,m12,m21)
 
-    Isolation-with-migration model with exponential pop growth.
+    Isolation model.
 
     nu1_0: Size of pop 1 after split.
     nu2_0: Size of pop 2 after split.
@@ -509,6 +509,83 @@ def IM(params, ns, pts):
     nu2_func = lambda t: nu2_0 * (nu2/nu2_0)**(t/T)
     phi = dadi.Integration.two_pops(phi, xx, T, nu1_func, nu2_func,
                                m12=m12, m21=m21)
+
+    fs = dadi.Spectrum.from_phi(phi, ns, (xx,xx))
+    return fs
+
+def IM_ancGrowth(params, ns, pts):
+    """
+    ns = (n1,n2)
+    params = (nu1_0,nu2_0,nu1,nu2,T)
+
+    Isolation-with-migration model with exponential pop growth before and after split
+
+    nu1_0: Size of pop 1 after split.
+    nu2_0: Size of pop 2 after split. 
+    nu1: Final size of pop 1.
+    nu2: Final size of pop 2.
+    T: Time in the past of split (in units of 2*Na generations) 
+    m12: migration rate for pop 2 to pop 1 (2*Na*m)
+    m21: migration rate for pop 1 to pop 2 (2*Na*m)
+    Tg: Time of growth in ancestral population minus T
+    nua: Final size of ancestral population
+    n1,n2: Sample sizes of resulting Spectrum
+    pts: Number of grid points to use in integration.
+    """
+    try:
+        nu1_0,nu2_0,nu1,nu2,T,m12,m21,Tg,nua = params
+    except ValueError:
+        print "params:", params, len(params)
+        raise ValueError
+
+    xx = dadi.Numerics.default_grid(pts)
+
+    phi = dadi.PhiManip.phi_1D(xx)
+    nua_func = lambda t: numpy.exp(numpy.log(nua) * t/(Tg+T))
+    phi = dadi.Integration.one_pop(phi, xx, Tg, nua_func)
+    phi = dadi.PhiManip.phi_1D_to_2D(xx, phi)
+
+    nu1_func = lambda t: nu1_0 * (nu1/nu1_0)**(t/T)
+    nu2_func = lambda t: nu2_0 * (nu2/nu2_0)**(t/T)
+    phi = dadi.Integration.two_pops(phi, xx, T, nu1_func, nu2_func, m12=m12, m21=m21)
+
+    fs = dadi.Spectrum.from_phi(phi, ns, (xx,xx))
+    return fs
+
+def IM_ancGrowth_const1(params, ns, pts):
+    """
+    ns = (n1,n2)
+    params = (nu1_0,nu2_0,nu1,nu2,T)
+
+    Isolation-with-migration model with exponential pop growth before split and after in pop 2
+
+    nu2_0: Size of pop 2 after split. 
+    nu1: Final size of pop 1.
+    nu2: Final size of pop 2.
+    T: Time in the past of split (in units of 2*Na generations) 
+    m12: migration rate for pop 2 to pop 1 (2*Na*m)
+    m21: migration rate for pop 1 to pop 2 (2*Na*m)
+    Tg: Time of growth in ancestral population minus T
+    nua: Final size of ancestral population
+    n1,n2: Sample sizes of resulting Spectrum
+    pts: Number of grid points to use in integration.
+    """
+    try:
+        nu2_0,nu1,nu2,T,m12,m21,Tg,nua = params
+    except ValueError:
+        print "params:", params, len(params)
+        raise ValueError
+
+    xx = dadi.Numerics.default_grid(pts)
+
+    phi = dadi.PhiManip.phi_1D(xx)
+    nua_func = lambda t: numpy.exp(numpy.log(nua) * t/(Tg+T))
+    phi = dadi.Integration.one_pop(phi, xx, Tg, nua_func)
+    phi = dadi.PhiManip.phi_1D_to_2D(xx, phi)
+
+    nu1_func = lambda t: nu1
+    nu2_func = lambda t: nu2_0 * (nu2/nu2_0)**(t/T)
+    phi = dadi.Integration.two_pops(phi, xx, T, nu1_func, nu2_func, m12=m12, m21=m21)
 
     fs = dadi.Spectrum.from_phi(phi, ns, (xx,xx))
     return fs
