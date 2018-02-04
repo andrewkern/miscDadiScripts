@@ -623,6 +623,42 @@ def IM_noMig(params, ns, pts):
     fs = dadi.Spectrum.from_phi(phi, ns, (xx,xx))
     return fs
 
+def IM_admix_noMig(params, ns, pts):
+    """
+    ns = (n1,n2)
+    params = (nu1_0,nu2_0,nu1,nu2,T,t_ad,p_ad)
+
+    Isolation model with exponential pop growth and admixture.
+
+    nu1_0: Size of pop 1 after split.
+    nu2_0: Size of pop 2 after split.
+    nu1: Final size of pop 1.
+    nu2: Final size of pop 2.
+    T: Time in the past of split (in units of 2*Na generations)
+    n1,n2: Sample sizes of resulting Spectrum
+    pts: Number of grid points to use in integration.
+    """
+    nu1_0,nu2_0,nu1,nu2,T,t_ad,p_ad = params
+
+    xx = dadi.Numerics.default_grid(pts)
+
+    phi = dadi.PhiManip.phi_1D(xx)
+    phi = dadi.PhiManip.phi_1D_to_2D(xx, phi)
+
+    nu1_func = lambda t: nu1_0 * (nu1/nu1_0)**(t/(T+t_ad))
+    nu2_func = lambda t: nu2_0 * (nu2/nu2_0)**(t/(T+t_ad))
+    phi = dadi.Integration.two_pops(phi, xx, T, nu1_func, nu2_func,
+                               m12=0, m21=0)
+
+    phi = dadi.PhiManip.phi_2D_admix_1_into_2(phi, p_ad, xx,xx)
+    nu1_0 = nu1_func(t_ad)
+    nu2_0 = nu2_func(t_ad)
+    nu1_func = lambda t: nu1_0 * (nu1/nu1_0)**(t/t_ad)
+    nu2_func = lambda t: nu2_0 * (nu2/nu2_0)**(t/t_ad)
+    phi = dadi.Integration.two_pops(phi, xx, t_ad, nu1_func, nu2_func,
+                               m12=0, m21=0)
+    return dadi.Spectrum.from_phi(phi, ns, (xx,xx))
+
 def contraction_and_growth(params, ns, pts):
     """
     params = (nuB,nuG,TB,TG)

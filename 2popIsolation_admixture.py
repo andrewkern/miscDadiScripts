@@ -32,10 +32,9 @@ data = data.fold()
 
 pts_l = [30,40,50]
 
-func = dadiFunctions.IM
-
-upper_bound = [100,10,100, 10, 20, 10,10]
-lower_bound = [1e-1,1e-2,1, 1e-2, 0.1,0,0]
+func = dadiFunctions.IM_admix_noMig
+upper_bound = [100, 10, 100, 10, 20, 1, 0.1]
+lower_bound = [1e-1, 1e-2, 1, 1e-2, 0.1, 0, 0]
 
 p1=dadiFunctions.makeRandomParams(lower_bound,upper_bound)
 
@@ -43,7 +42,6 @@ func_ex = dadi.Numerics.make_extrap_func(func)
 
 # Instantiate Optimization Problem 
 
-#lamda definition of objective, stuffing constraint into return value
 def objfunc(x):
 	f = dadi.Inference._object_func(x, data, func_ex, pts_l, 
 	                                  lower_bound=lower_bound,
@@ -58,8 +56,8 @@ opt_prob.addVar('nu2_0','c',lower=lower_bound[1],upper=upper_bound[1],value=p1[1
 opt_prob.addVar('nu1','c',lower=lower_bound[2],upper=upper_bound[2],value=p1[2])
 opt_prob.addVar('nu2','c',lower=lower_bound[3],upper=upper_bound[3],value=p1[3])
 opt_prob.addVar('T','c',lower=lower_bound[4],upper=upper_bound[4],value=p1[4])
-opt_prob.addVar('mSim_Sech','c',lower=lower_bound[5],upper=upper_bound[5],value=p1[5])
-opt_prob.addVar('mSech_Sim','c',lower=lower_bound[6],upper=upper_bound[6],value=p1[6])
+opt_prob.addVar('t_ad','c',lower=lower_bound[5],upper=upper_bound[5],value=p1[5])
+opt_prob.addVar('p_ad','c',lower=lower_bound[6],upper=upper_bound[6],value=p1[6])
 opt_prob.addObj('f')
 
 if myrank == 0:
@@ -92,9 +90,8 @@ if myrank == 0:
 	
 
 	print 'Nref:',Nref
-	paramsTxt =['nu1_0','nu2_0','nu1','nu2','T','2Nref_m12','2Nref_m21']
-	scaledParams = [Nref*popt[0],Nref*popt[1],Nref*popt[2],Nref*popt[3],2*Nref/gensPerYear*popt[4],popt[5],
-	                popt[6]]
+	paramsTxt =['nu1_0','nu2_0','nu1','nu2','T','t_ad', 'p_ad']
+	scaledParams = [Nref*popt[0],Nref*popt[1],Nref*popt[2],Nref*popt[3],2*Nref/gensPerYear*popt[4],2*Nref/gensPerYear*popt[5], popt[6]]
 	for i in range(len(paramsTxt)):
 		print paramsTxt[i],':',str(scaledParams[i])
 	print ""
@@ -129,9 +126,8 @@ if myrank == 0:
 	
 
 	print 'Nref:',Nref
-	paramsTxt =['nu1_0','nu2_0','nu1','nu2','T','2Nref_m12','2Nref_m21']
-	scaledParams = [Nref*popt[0],Nref*popt[1],Nref*popt[2],Nref*popt[3],2*Nref/gensPerYear*popt[4],popt[5],
-	                popt[6]]
+	paramsTxt =['nu1_0','nu2_0','nu1','nu2','T','t_ad', 'p_ad']
+	scaledParams = [Nref*popt[0],Nref*popt[1],Nref*popt[2],Nref*popt[3],2*Nref/gensPerYear*popt[4],2*Nref/gensPerYear*popt[5], popt[6]]
 	for i in range(len(paramsTxt)):
 		print paramsTxt[i],':',str(scaledParams[i])
 	print ""

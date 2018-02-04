@@ -20,14 +20,14 @@ def readLFromFSFile(fsFileName):
                 lines.append(line)
         ns = [int(x)-1 for x in lines[0].split()[:2]]
         L = sum([int(x) for x in lines[1].split()])
-return L, ns
+    return L, ns
 
-inFileName = sys.argv[1].split("/")[-1]
+inFileName = sys.argv[1]
 swarmSize = int(sys.argv[2])
 gensPerYear = float(sys.argv[3])
 
-L, ns = readLFromFSFile(sys.argv[1])
-data = dadi.Spectrum.from_file(sys.argv[1])
+L, ns = readLFromFSFile(inFileName)
+data = dadi.Spectrum.from_file(inFileName)
 data = data.fold()
 
 pts_l = [30,40,50]
@@ -39,8 +39,6 @@ p1=dadiFunctions.makeRandomParams(lower_bound,upper_bound)
 func_ex = dadi.Numerics.make_extrap_func(func)
 
 # Instantiate Optimization Problem 
-
-#lamda definition of objective, stuffing constraint into return value
 
 def objfunc(x):
 	f = dadi.Inference._object_func(x, data, func_ex, pts_l, 
@@ -89,7 +87,7 @@ if myrank == 0:
 
 	print 'Nref:',Nref
 	paramsTxt =['nu1_0','nu2_0','nu1','nu2','T']
-	scaledParams = [Nref*popt[0],Nref*popt[1],Nref*popt[2],Nref*popt[3],2*Nref/15*popt[4]]
+	scaledParams = [Nref*popt[0],Nref*popt[1],Nref*popt[2],Nref*popt[3],2*Nref/gensPerYear*popt[4]]
 	for i in range(len(paramsTxt)):
 		print paramsTxt[i],':',str(scaledParams[i])
 	print ""
@@ -125,7 +123,7 @@ if myrank == 0:
 
 	print 'Nref:',Nref
 	paramsTxt =['nu1_0','nu2_0','nu1','nu2','T']
-	scaledParams = [Nref*popt[0],Nref*popt[1],Nref*popt[2],Nref*popt[3],2*Nref/15*popt[4]]
+	scaledParams = [Nref*popt[0],Nref*popt[1],Nref*popt[2],Nref*popt[3],2*Nref/gensPerYear*popt[4]]
 	for i in range(len(paramsTxt)):
 		print paramsTxt[i],':',str(scaledParams[i])
 	print ""
